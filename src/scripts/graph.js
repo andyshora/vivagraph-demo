@@ -1,11 +1,7 @@
 "use strict";
 
-const NUM_NODES = 1000;
-const NUM_LINKS = 10;
-const NUM_ACTIVE_NODES = 20;
 const NODE_COLOR = 0xff00ff; // hex rrggbb
 const NODE_SIZE = 16;
-const MAX_EMAILS = 1000;
 
 let emails = [];
 
@@ -46,7 +42,7 @@ const COLORS = [
   0x9edae5ff
 ];*/
 
-var graph, domLabels, graphics, layout, renderer, processingElement, container, vertexShader, fragmentShader, mailboxesData;
+var graph, domLabels, graphics, layout, renderer, processingElement, container, vertexShader, fragmentShader, mailboxesData, networkData;
 
 class Utils {
   static getRandom(min = 1, max = NUM_NODES) {
@@ -78,12 +74,14 @@ function addNodes(data) {
     console.log('Mailbox mode');
 
     createNodes(data, 'Mailbox');
+    createLinks();
     createLabels(data, 'Mailbox');
 
   } else if (data && 'GroupName' in data[0]) {
     console.log('Group mode');
 
     createNodes(data, 'GroupName');
+    createLinks();
     createLabels(data, 'GroupName');
   }
 
@@ -110,58 +108,23 @@ function createLabels(data, keyName) {
   domLabels = labels;
 }
 
-function createNodes(data, keyName) {
-  for (var i = 0; i < data.length; i++) {
-    graph.addNode(i, data[i]);
-
-    // temp - generate dummy emails
-    if (i < NUM_ACTIVE_NODES) {
-
-      for (var j = 0; j < NUM_LINKS; j++) {
-        var k = Utils.getRandom(0, data.length - 1);
-        var total = Utils.getRandom(1, MAX_EMAILS);
-        if (k !== i) {
-          emails.push({
-            from: data[i][keyName],
-            to: data[k][keyName],
-            total: total
-          });
-
-          graph.addLink(i, k, { total: total });
-          console.log('addLink', i, k);
-        }
-
-      }
-    }
-
-
+function createLinks() {
+  /* Count: "3"
+Recipient: "test047@exch10-3.com"
+Sender: "test031@exch10-3.com" */
+  for (var i = 0; i < networkData.length; i++) {
+    var d = networkData[i];
+    var total = parseInt(d.total, 10);
+    // console.log(d['Sender'], d['Recipient']);
+    graph.addLink(d['Sender'], d['Recipient'], { total: total });
   }
-
 }
 
-function addDummyNodes() {
-  for (var i = 1; i <= NUM_NODES; i++) {
-
-    graph.addNode(i);
-    /*if (i === 1) {
-      graph.addLink(1, NUM_NODES);
-    } else {
-      graph.addLink(i, i - 1);
-    }*/
+function createNodes(data, keyName) {
+  for (var i = 0; i < data.length; i++) {
+    graph.addNode(data[i][keyName], data[i]);
   }
 
-  for (var i = 1; i <= NUM_ACTIVE_NODES; i++) {
-    var from = i;
-
-    for (var j = 1; j <= NUM_LINKS; j++) {
-
-      var to = Utils.getRandom();
-      if (from !== to) {
-        graph.addLink(from, to);
-      }
-    }
-
-  }
 }
 
 function precompute(iterations, callback) {
@@ -190,12 +153,16 @@ function onResizeHandler() {
   }
 }
 
-function onMailboxDataReceived(data) {
-  mailboxesData = data;
-  console.log('mailboxesData', mailboxesData);
+var numDataReceived = 0;
+function onDataReceived() {
+
+  numDataReceived++;
+
+  if (numDataReceived < 2) {
+    return;
+  }
 
   addNodes(mailboxesData);
-  // domLabels = generateDOMLabels(graph);
 
   // we need to compute layout, but we don't want to freeze the browser
   precompute(1000, renderGraph);
@@ -208,7 +175,14 @@ function onLoad() {
   vertexShader = document.getElementById('vertex-shader').innerHTML;
   fragmentShader = document.getElementById('fragment-shader').innerHTML;
 
-  $.getJSON('data/mailboxes.json', onMailboxDataReceived);
+  $.getJSON('data/mailboxes.json', data => {
+    mailboxesData = data;
+    onDataReceived();
+  });
+  $.getJSON('data/network.json', data => {
+    networkData = data;
+    onDataReceived();
+  });
 
   graph = Viva.Graph.graph();
 
@@ -232,21 +206,6 @@ function onLoad() {
 
   window.addEventListener('resize', onResizeHandler);
 
-}
-
-function generateDOMLabels(graph) {
-  // this will map node id into DOM element
-  var labels = Object.create(null);
-  graph.forEachNode(function(node) {
-    var label = document.createElement('span');
-    label.classList.add('node-label');
-    label.innerText = node.id;
-    labels[node.id] = label;
-    container.appendChild(label);
-  });
-  // NOTE: If your graph changes over time you will need to
-  // monitor graph changes and update DOM elements accordingly
-  return labels;
 }
 
 function renderGraph() {
@@ -294,6 +253,8 @@ function renderGraph() {
   // to render nodes:
   var circleNode = buildCircleNodeShader();
   graphics.setNodeProgram(circleNode);
+
+  const MAX_EMAILS = parseInt(_.max(networkData, d => { return parseInt(d.Count, 10) }).Count, 10);
 
   // second, change the node ui model, which can be understood
   // by the custom shader:

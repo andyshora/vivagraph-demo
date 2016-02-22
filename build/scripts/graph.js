@@ -4,15 +4,15 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var numNodes = 500;
-var numLinks = 10;
-var numActiveNodes = 50;
-var nodeColor = 0xff00ff; // hex rrggbb
-var nodeSize = 16;
+var NUM_NODES = 500;
+var NUM_LINKS = 10;
+var NUM_ACTIVE_NODES = 50;
+var NODE_COLOR = 0xff00ff; // hex rrggbb
+var NODE_SIZE = 16;
 
-var graph, layout, renderer, processingElement, container;
+var COLORS = [0x1f77b4ff, 0xaec7e8ff, 0xff7f0eff, 0xffbb78ff, 0x2ca02cff, 0x98df8aff, 0xd62728ff, 0xff9896ff, 0x9467bdff, 0xc5b0d5ff, 0x8c564bff, 0xc49c94ff, 0xe377c2ff, 0xf7b6d2ff, 0x7f7f7fff, 0xc7c7c7ff, 0xbcbd22ff, 0xdbdb8dff, 0x17becfff, 0x9edae5ff];
 
-var colors = [0x1f77b4ff, 0xaec7e8ff, 0xff7f0eff, 0xffbb78ff, 0x2ca02cff, 0x98df8aff, 0xd62728ff, 0xff9896ff, 0x9467bdff, 0xc5b0d5ff, 0x8c564bff, 0xc49c94ff, 0xe377c2ff, 0xf7b6d2ff, 0x7f7f7fff, 0xc7c7c7ff, 0xbcbd22ff, 0xdbdb8dff, 0x17becfff, 0x9edae5ff];
+var graph, layout, renderer, processingElement, container, vertexShader, fragmentShader;
 
 var Utils = function () {
   function Utils() {
@@ -23,7 +23,7 @@ var Utils = function () {
     key: 'getRand',
     value: function getRand() {
       var min = arguments.length <= 0 || arguments[0] === undefined ? 1 : arguments[0];
-      var max = arguments.length <= 1 || arguments[1] === undefined ? numNodes : arguments[1];
+      var max = arguments.length <= 1 || arguments[1] === undefined ? NUM_NODES : arguments[1];
 
       return min + Math.floor(Math.random() * max);
     }
@@ -32,26 +32,25 @@ var Utils = function () {
   return Utils;
 }();
 
-/*class QBCommGraph {
-  constructor() {}
-
-}*/
+var QBCommGraph = function QBCommGraph() {
+  _classCallCheck(this, QBCommGraph);
+};
 
 function addLinks() {
-  for (var i = 1; i <= numNodes; i++) {
+  for (var i = 1; i <= NUM_NODES; i++) {
 
     graph.addNode(i);
     /*if (i === 1) {
-      graph.addLink(1, numNodes);
+      graph.addLink(1, NUM_NODES);
     } else {
       graph.addLink(i, i - 1);
     }*/
   }
 
-  for (var i = 1; i <= numActiveNodes; i++) {
+  for (var i = 1; i <= NUM_ACTIVE_NODES; i++) {
     var from = i;
 
-    for (var j = 1; j <= numLinks; j++) {
+    for (var j = 1; j <= NUM_LINKS; j++) {
 
       var to = Utils.getRand();
       if (from !== to) {
@@ -90,6 +89,8 @@ function onLoad() {
 
   processingElement = document.getElementById('log');
   container = document.getElementById('graph-container');
+  vertexShader = document.getElementById('vertex-shader').innerHTML;
+  fragmentShader = document.getElementById('fragment-shader').innerHTML;
 
   graph = Viva.Graph.graph();
 
@@ -141,9 +142,9 @@ function renderGraph() {
   // second, change the node ui model, which can be understood
   // by the custom shader:
   graphics.node(function (node) {
-    return new WebglCircle(nodeSize, nodeColor);
+    return new WebglCircle(NODE_SIZE, NODE_COLOR);
   }).link(function (link) {
-    return Viva.Graph.View.webglLine(colors[Math.random() * colors.length << 0]);
+    return Viva.Graph.View.webglLine(COLORS[Math.random() * COLORS.length << 0]);
   });
 
   renderer = Viva.Graph.View.renderer(graph, {
@@ -170,8 +171,6 @@ function renderGraph() {
       setTimeout(function () {
         zoomOut(desiredScale, currentScale);
       }, 1);
-    } else {
-      // renderer.pause();
     }
   }
 }
@@ -186,13 +185,7 @@ function WebglCircle(size, color) {
 // program, used by webgl renderer:
 function buildCircleNodeShader() {
   // For each primitive we need 4 attributes: x, y, color and size.
-  var ATTRIBUTES_PER_PRIMITIVE = 4,
-      nodesFS = ['precision mediump float;', 'varying vec4 color;', 'void main(void) {', '   if ((gl_PointCoord.x - 0.5) * (gl_PointCoord.x - 0.5) + (gl_PointCoord.y - 0.5) * (gl_PointCoord.y - 0.5) < 0.25) {', '     gl_FragColor = color;', '   } else {', '     gl_FragColor = vec4(0);', '   }', '}'].join('\n'),
-      nodesVS = ['attribute vec2 a_vertexPos;',
-  // Pack color and size into vector. First elemnt is color, second - size.
-  // Since it's floating point we can only use 24 bit to pack colors...
-  // thus alpha channel is dropped, and is always assumed to be 1.
-  'attribute vec2 a_customAttributes;', 'uniform vec2 u_screenSize;', 'uniform mat4 u_transform;', 'varying vec4 color;', 'void main(void) {', '   gl_Position = u_transform * vec4(a_vertexPos/u_screenSize, 0, 1);', '   gl_PointSize = a_customAttributes[1] * u_transform[0][0];', '   float c = a_customAttributes[0];', '   color.b = mod(c, 256.0); c = floor(c/256.0);', '   color.g = mod(c, 256.0); c = floor(c/256.0);', '   color.r = mod(c, 256.0); c = floor(c/256.0); color /= 255.0;', '   color.a = 1.0;', '}'].join('\n');
+  var ATTRIBUTES_PER_PRIMITIVE = 4;
 
   var program,
       gl,
@@ -214,8 +207,7 @@ function buildCircleNodeShader() {
     load: function load(glContext) {
       gl = glContext;
       webglUtils = Viva.Graph.webgl(glContext);
-
-      program = webglUtils.createProgram(nodesVS, nodesFS);
+      program = webglUtils.createProgram(vertexShader, fragmentShader);
       gl.useProgram(program);
       locations = webglUtils.getLocations(program, ['a_vertexPos', 'a_customAttributes', 'u_screenSize', 'u_transform']);
 

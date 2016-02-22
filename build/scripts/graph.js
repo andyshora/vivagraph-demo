@@ -37,10 +37,6 @@ var Utils = function () {
 
 }*/
 
-var getRand = function getRand() {
-  return 1 + Math.floor(Math.random() * numNodes);
-};
-
 function addLinks() {
   for (var i = 1; i <= numNodes; i++) {
 

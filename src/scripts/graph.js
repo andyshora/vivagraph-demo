@@ -43,9 +43,6 @@ class Utils {
 
 }*/
 
-var getRand = () => {
-  return 1 + Math.floor(Math.random() * numNodes);
-}
 
 function addLinks() {
   for (var i = 1; i <= numNodes; i++) {
@@ -65,8 +62,6 @@ function addLinks() {
 
       var to = Utils.getRand();
       if (from !== to) {
-
-        console.log('addLink', j, to);
         graph.addLink(j, to);
       }
     }

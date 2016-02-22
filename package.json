@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "styles": "sass assets/styles/main.scss assets/styles/main.css",
-    "start": "python -m SimpleHTTPServer 8000",
-    "scripts": "$(npm bin)/babel assets/scripts -d assets/js"
+    "styles": "sass src/styles/main.scss build/styles/main.css",
+    "scripts": "$(npm bin)/babel src/scripts -d build/scripts",
+    "start": "python -m SimpleHTTPServer 8000"
   },
   "repository": {
     "type": "git",

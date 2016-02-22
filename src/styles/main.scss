@@ -42,12 +42,20 @@ canvas,
 
 .node-label {
   position: absolute;
-  pointer-events: none;
+  // pointer-events: none;
   color: white;
   z-index: 10;
   text-align: center;
-  width: 200px;
+  width: 300px;
   display: inline-block;
-  margin-left: -100px;
+  margin-left: -160px;
+  margin-top: -10px;
+  opacity: 0;
+  padding: 10px;
+  z-index: 1;
+  font-size: 20px;
 
+  &:hover {
+    opacity: 1;
+  }
 }

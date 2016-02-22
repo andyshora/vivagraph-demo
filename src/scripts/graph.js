@@ -1,8 +1,8 @@
 "use strict";
 
-const NUM_NODES = 500;
-const NUM_LINKS = 10;
-const NUM_ACTIVE_NODES = 50;
+const NUM_NODES = 1000;
+const NUM_LINKS = 5;
+const NUM_ACTIVE_NODES = 1000;
 const NODE_COLOR = 0xff00ff; // hex rrggbb
 const NODE_SIZE = 16;
 
@@ -29,7 +29,7 @@ const COLORS = [
   0x9edae5ff
 ];
 
-var graph, layout, renderer, processingElement, container, vertexShader, fragmentShader;
+var graph, domLabels, graphics, layout, renderer, processingElement, container, vertexShader, fragmentShader, mailboxesData;
 
 class Utils {
   static getRand(min = 1, max = NUM_NODES) {
@@ -44,7 +44,55 @@ class QBCommGraph {
 }
 
 
-function addLinks() {
+function addNodes(data) {
+
+  if (!data) {
+    return addDummyNodes();
+  }
+
+  if (data && 'Mailbox' in data[0]) {
+    console.log('Mailbox mode');
+
+    createNodes(data, 'Mailbox');
+    createLabels(data, 'Mailbox');
+
+  } else if (data && 'GroupName' in data[0]) {
+    console.log('Group mode');
+
+    createNodes(data, 'GroupName');
+    createLabels(data, 'GroupName');
+  }
+
+
+
+}
+
+function createLabels(data, keyName) {
+
+  var labels = Object.create(null);
+
+  for (var i = 0; i < data.length; i++) {
+    var node = data[i];
+    var id = data[i][keyName];
+    console.log('id', id);
+    var label = document.createElement('span');
+    label.classList.add('node-label');
+    label.innerText = node[keyName];
+    labels[id] = label;
+    container.appendChild(label);
+  }
+  // NOTE: If your graph changes over time you will need to
+  // monitor graph changes and update DOM elements accordingly
+  domLabels = labels;
+}
+
+function createNodes(data, keyName) {
+  for (var i = 0; i < data.length; i++) {
+    graph.addNode(i, data[i]);
+  }
+}
+
+function addDummyLNodes() {
   for (var i = 1; i <= NUM_NODES; i++) {
 
     graph.addNode(i);
@@ -95,6 +143,17 @@ function onResizeHandler() {
   }
 }
 
+function onMailboxDataReceived(data) {
+  mailboxesData = data;
+  console.log('mailboxesData', mailboxesData);
+
+  addNodes(mailboxesData);
+  // domLabels = generateDOMLabels(graph);
+
+  // we need to compute layout, but we don't want to freeze the browser
+  precompute(1000, renderGraph);
+}
+
 function onLoad() {
 
   processingElement = document.getElementById('log');
@@ -102,20 +161,19 @@ function onLoad() {
   vertexShader = document.getElementById('vertex-shader').innerHTML;
   fragmentShader = document.getElementById('fragment-shader').innerHTML;
 
+  $.getJSON('data/mailboxes.json', onMailboxDataReceived);
+
   graph = Viva.Graph.graph();
 
   layout = Viva.Graph.Layout.forceDirected(graph, {
     springLength : 100,
-    springCoeff : 0.0001,
+    springCoeff : 0.00001,
     dragCoeff : 0.05,
-    gravity : -1.5,
+    gravity : -1.2,
     theta : 1
   });
 
-  addLinks();
-
-  // we need to compute layout, but we don't want to freeze the browser
-  precompute(1000, renderGraph);
+  // addNodes();
 
   $('#reset').click(function () {
     renderer.reset();
@@ -125,8 +183,43 @@ function onLoad() {
 
 }
 
+function generateDOMLabels(graph) {
+  // this will map node id into DOM element
+  var labels = Object.create(null);
+  graph.forEachNode(function(node) {
+    var label = document.createElement('span');
+    label.classList.add('node-label');
+    label.innerText = node.id;
+    labels[node.id] = label;
+    container.appendChild(label);
+  });
+  // NOTE: If your graph changes over time you will need to
+  // monitor graph changes and update DOM elements accordingly
+  return labels;
+}
+
 function renderGraph() {
-  var graphics = Viva.Graph.View.webglGraphics();
+  graphics = Viva.Graph.View.webglGraphics();
+
+  graphics.placeNode(function(ui, pos) {
+    // This callback is called by the renderer before it updates
+    // node coordinate. We can use it to update corresponding DOM
+    // label position;
+
+    // we create a copy of layout position
+    var domPos = {
+        x: pos.x,
+        y: pos.y
+    };
+    // And ask graphics to transform it to DOM coordinates:
+    graphics.transformGraphToClientCoordinates(domPos);
+
+    // then move corresponding dom label to its own position:
+    var nodeId = ui.node.data.Mailbox;
+    var labelStyle = domLabels[nodeId].style;
+    labelStyle.left = domPos.x + 'px';
+    labelStyle.top = domPos.y + 'px';
+  });
 
   // Step 4. Customize link appearance:
   //   As you might have guessed already the link()/placeLink()

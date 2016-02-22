@@ -39,3 +39,10 @@ canvas,
   bottom: 0;
   right: 0;
 }
+
+.node-label {
+  position: absolute;
+  pointer-events: none;
+  color: white;
+  z-index: 10;
+}

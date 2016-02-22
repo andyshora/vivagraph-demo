@@ -1,25 +1,49 @@
-var numNodes = 500;
-var numLinks = 10;
-var numActiveNodes = 50;
-var nodeColor = 0xff00ff; // hex rrggbb
-var nodeSize = 16;
+"use strict";
+
+const numNodes = 500;
+const numLinks = 10;
+const numActiveNodes = 50;
+const nodeColor = 0xff00ff; // hex rrggbb
+const nodeSize = 16;
 
 var graph, layout, renderer, processingElement, container;
 
-var colors = [
-  0x1f77b4ff, 0xaec7e8ff,
-  0xff7f0eff, 0xffbb78ff,
-  0x2ca02cff, 0x98df8aff,
-  0xd62728ff, 0xff9896ff,
-  0x9467bdff, 0xc5b0d5ff,
-  0x8c564bff, 0xc49c94ff,
-  0xe377c2ff, 0xf7b6d2ff,
-  0x7f7f7fff, 0xc7c7c7ff,
-  0xbcbd22ff, 0xdbdb8dff,
-  0x17becfff, 0x9edae5ff
+const colors = [
+  0x1f77b4ff,
+  0xaec7e8ff,
+  0xff7f0eff,
+  0xffbb78ff,
+  0x2ca02cff,
+  0x98df8aff,
+  0xd62728ff,
+  0xff9896ff,
+  0x9467bdff,
+  0xc5b0d5ff,
+  0x8c564bff,
+  0xc49c94ff,
+  0xe377c2ff,
+  0xf7b6d2ff,
+  0x7f7f7fff,
+  0xc7c7c7ff,
+  0xbcbd22ff,
+  0xdbdb8dff,
+  0x17becfff,
+  0x9edae5ff
 ];
 
-function getRand() {
+class Utils {
+  static getRand(min = 1, max = numNodes) {
+    return min + Math.floor(Math.random() * max);
+  }
+}
+
+
+/*class QBCommGraph {
+  constructor() {}
+
+}*/
+
+var getRand = () => {
   return 1 + Math.floor(Math.random() * numNodes);
 }
 
@@ -39,8 +63,10 @@ function addLinks() {
 
     for (var j = 1; j <= numLinks; j++) {
 
-      var to = getRand();
+      var to = Utils.getRand();
       if (from !== to) {
+
+        console.log('addLink', j, to);
         graph.addLink(j, to);
       }
     }
@@ -56,7 +82,7 @@ function precompute(iterations, callback) {
     iterations--;
     i++;
   }
-  processingElement.innerHTML = 'Layout precompute: ' + iterations;
+  processingElement.innerHTML = `Layout precompute: ${iterations}`;
   if (iterations > 0) {
     setTimeout(function () {
         precompute(iterations, callback);
@@ -217,6 +243,7 @@ function buildCircleNodeShader() {
       buffer,
       locations,
       utils,
+      webglUtils,
       nodes = new Float32Array(64),
       nodesCount = 0,
       canvasWidth, canvasHeight, transform,

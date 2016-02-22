@@ -114,8 +114,7 @@ Recipient: "test047@exch10-3.com"
 Sender: "test031@exch10-3.com" */
   for (var i = 0; i < networkData.length; i++) {
     var d = networkData[i];
-    var total = parseInt(d.total, 10);
-    // console.log(d['Sender'], d['Recipient']);
+    var total = parseInt(d.Count, 10);
     graph.addLink(d['Sender'], d['Recipient'], { total: total });
   }
 }
@@ -263,7 +262,6 @@ function renderGraph() {
   })
   .link(function(link) {
 
-    const color = (link.data.total < MAX_EMAILS / 2) ? 0x2ca02cff : 0xffffffff;
     // scale against 10 colors
     // 0 = brightest
     var index = COLORS.length - Utils.toRangeIndex(link.data.total, MAX_EMAILS, COLORS.length);

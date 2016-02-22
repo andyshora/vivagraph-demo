@@ -1,10 +1,23 @@
-var numNodes = 100;
+var numNodes = 500;
 var numLinks = 10;
-var numActiveNodes = 10;
+var numActiveNodes = 50;
 var nodeColor = 0xff00ff; // hex rrggbb
-var nodeSize = 32;
+var nodeSize = 16;
 
 var graph, layout, renderer, processingElement, container;
+
+var colors = [
+  0x1f77b4ff, 0xaec7e8ff,
+  0xff7f0eff, 0xffbb78ff,
+  0x2ca02cff, 0x98df8aff,
+  0xd62728ff, 0xff9896ff,
+  0x9467bdff, 0xc5b0d5ff,
+  0x8c564bff, 0xc49c94ff,
+  0xe377c2ff, 0xf7b6d2ff,
+  0x7f7f7fff, 0xc7c7c7ff,
+  0xbcbd22ff, 0xdbdb8dff,
+  0x17becfff, 0x9edae5ff
+];
 
 function getRand() {
   return 1 + Math.floor(Math.random() * numNodes);
@@ -54,6 +67,13 @@ function precompute(iterations, callback) {
   }
 }
 
+function onResizeHandler() {
+  if (renderer) {
+    renderer.reset();
+
+  }
+}
+
 function onLoad() {
 
   processingElement = document.getElementById('log');
@@ -75,8 +95,10 @@ function onLoad() {
   precompute(1000, renderGraph);
 
   $('#reset').click(function () {
-    renderer.reset()
+    renderer.reset();
   });
+
+  window.addEventListener('resize', onResizeHandler);
 
 }
 
@@ -110,7 +132,10 @@ function renderGraph() {
   // by the custom shader:
   graphics.node(function(node) {
     return new WebglCircle(nodeSize, nodeColor);
-  });
+  })
+  .link(function(link) {
+    return Viva.Graph.View.webglLine(colors[(Math.random() * colors.length) << 0]);
+   });
 
 
 

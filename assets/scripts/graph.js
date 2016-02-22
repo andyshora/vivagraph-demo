@@ -1,10 +1,10 @@
-var numNodes = 1000;
+var numNodes = 100;
 var numLinks = 10;
 var numActiveNodes = 10;
 var nodeColor = 0xff00ff; // hex rrggbb
 var nodeSize = 32;
 
-var graph, layout, processingElement, container;
+var graph, layout, renderer, processingElement, container;
 
 function getRand() {
   return 1 + Math.floor(Math.random() * numNodes);
@@ -63,9 +63,9 @@ function onLoad() {
 
   layout = Viva.Graph.Layout.forceDirected(graph, {
     springLength : 100,
-    springCoeff : 0,
-    dragCoeff : 0.01,
-    gravity : -1.2,
+    springCoeff : 0.0001,
+    dragCoeff : 0.05,
+    gravity : -1.5,
     theta : 1
   });
 
@@ -73,6 +73,10 @@ function onLoad() {
 
   // we need to compute layout, but we don't want to freeze the browser
   precompute(1000, renderGraph);
+
+  $('#reset').click(function () {
+    renderer.reset()
+  });
 
 }
 
@@ -110,7 +114,7 @@ function renderGraph() {
 
 
 
-  var renderer = Viva.Graph.View.renderer(graph, {
+  renderer = Viva.Graph.View.renderer(graph, {
     graphics: graphics,
     layout: layout,
     container: container
@@ -133,7 +137,9 @@ function renderGraph() {
       currentScale = renderer.zoomOut();
       setTimeout(function () {
         zoomOut(desiredScale, currentScale);
-      }, 16);
+      }, 1);
+    } else {
+      // renderer.pause();
     }
   }
 

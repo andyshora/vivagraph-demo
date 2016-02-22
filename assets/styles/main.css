@@ -26,3 +26,11 @@ canvas,
   position: absolute;
   overflow: hidden;
   margin: 0px; }
+
+.controls {
+  background: red;
+  position: absolute;
+  bottom: 0;
+  right: 0; }
+
+/*# sourceMappingURL=main.css.map */

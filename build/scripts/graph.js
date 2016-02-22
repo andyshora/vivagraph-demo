@@ -55,8 +55,6 @@ function addLinks() {
 
       var to = Utils.getRand();
       if (from !== to) {
-
-        console.log('addLink', j, to);
         graph.addLink(j, to);
       }
     }

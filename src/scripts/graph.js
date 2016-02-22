@@ -1,12 +1,29 @@
 "use strict";
 
 const NUM_NODES = 1000;
-const NUM_LINKS = 5;
-const NUM_ACTIVE_NODES = 1000;
+const NUM_LINKS = 10;
+const NUM_ACTIVE_NODES = 20;
 const NODE_COLOR = 0xff00ff; // hex rrggbb
 const NODE_SIZE = 16;
+const MAX_EMAILS = 1000;
 
+let emails = [];
+
+// light -> dark
 const COLORS = [
+  0x009DF9FF,
+  0x0094EAFF,
+  0x0089D8FF,
+  0x0081CCFF,
+  0x0075BAFF,
+  0x006CAAFF,
+  0x005C91FF,
+  0x003351FF,
+  0x003351FF,
+  0x003351FF
+];
+
+/*const COLORS = [
   0x1f77b4ff,
   0xaec7e8ff,
   0xff7f0eff,
@@ -27,13 +44,20 @@ const COLORS = [
   0xdbdb8dff,
   0x17becfff,
   0x9edae5ff
-];
+];*/
 
 var graph, domLabels, graphics, layout, renderer, processingElement, container, vertexShader, fragmentShader, mailboxesData;
 
 class Utils {
-  static getRand(min = 1, max = NUM_NODES) {
+  static getRandom(min = 1, max = NUM_NODES) {
     return min + Math.floor(Math.random() * max);
+  }
+  static roundToNearest(number, order = 10) {
+    return Math.round(number / order) * order;
+  }
+  static toRangeIndex(num, max, divisions) {
+    var temp = num / max;
+    return Math.floor(temp * divisions);
   }
 }
 
@@ -74,7 +98,7 @@ function createLabels(data, keyName) {
   for (var i = 0; i < data.length; i++) {
     var node = data[i];
     var id = data[i][keyName];
-    console.log('id', id);
+
     var label = document.createElement('span');
     label.classList.add('node-label');
     label.innerText = node[keyName];
@@ -89,10 +113,33 @@ function createLabels(data, keyName) {
 function createNodes(data, keyName) {
   for (var i = 0; i < data.length; i++) {
     graph.addNode(i, data[i]);
+
+    // temp - generate dummy emails
+    if (i < NUM_ACTIVE_NODES) {
+
+      for (var j = 0; j < NUM_LINKS; j++) {
+        var k = Utils.getRandom(0, data.length - 1);
+        var total = Utils.getRandom(1, MAX_EMAILS);
+        if (k !== i) {
+          emails.push({
+            from: data[i][keyName],
+            to: data[k][keyName],
+            total: total
+          });
+
+          graph.addLink(i, k, { total: total });
+          console.log('addLink', i, k);
+        }
+
+      }
+    }
+
+
   }
+
 }
 
-function addDummyLNodes() {
+function addDummyNodes() {
   for (var i = 1; i <= NUM_NODES; i++) {
 
     graph.addNode(i);
@@ -108,9 +155,9 @@ function addDummyLNodes() {
 
     for (var j = 1; j <= NUM_LINKS; j++) {
 
-      var to = Utils.getRand();
+      var to = Utils.getRandom();
       if (from !== to) {
-        graph.addLink(j, to);
+        graph.addLink(from, to);
       }
     }
 
@@ -177,6 +224,10 @@ function onLoad() {
 
   $('#reset').click(function () {
     renderer.reset();
+  });
+
+  $('#pause').click(function () {
+    renderer.pause();
   });
 
   window.addEventListener('resize', onResizeHandler);
@@ -250,7 +301,14 @@ function renderGraph() {
     return new WebglCircle(NODE_SIZE, NODE_COLOR);
   })
   .link(function(link) {
-    return Viva.Graph.View.webglLine(COLORS[(Math.random() * COLORS.length) << 0]);
+
+    const color = (link.data.total < MAX_EMAILS / 2) ? 0x2ca02cff : 0xffffffff;
+    // scale against 10 colors
+    // 0 = brightest
+    var index = COLORS.length - Utils.toRangeIndex(link.data.total, MAX_EMAILS, COLORS.length);
+
+    return Viva.Graph.View.webglLine(COLORS[index]);
+    // return Viva.Graph.View.webglLine(COLORS[(Math.random() * COLORS.length) << 0]);
    });
 
 

@@ -7,16 +7,16 @@ let emails = [];
 
 // light -> dark
 const COLORS = [
-  0x009DF9FF,
-  0x009DF9FF,
-  0x009DF9DD,
-  0x009DF9DD,
-  0x009DF9DD,
-  0x009DF9CC,
-  0x009DF9CC,
-  0x009DF9CC,
-  0x009DF9BB,
-  0x009DF9BB
+  0xB3E095FF,
+  0x82BB5DFF,
+  0x82BB5DFF,
+  0x599532FF,
+  0x599532FF,
+  0x387013FF,
+  0x387013FF,
+  0x1E4B00FF,
+  0x1E4B00FF,
+  0x1E4B00FF
 ];
 
 /*const COLORS = [
@@ -63,6 +63,7 @@ class QBCommGraph {
 
 }
 
+var activity = {};
 
 function addNodes(data) {
 
@@ -70,12 +71,15 @@ function addNodes(data) {
     return addDummyNodes();
   }
 
+  // data = _.sortBy(data, 'centrality');
+
   if (data && 'Mailbox' in data[0]) {
     console.log('Mailbox mode');
 
     createNodes(data, 'Mailbox');
     createLinks();
     createLabels(data, 'Mailbox');
+    setActivityWeights();
 
   } else if (data && 'GroupName' in data[0]) {
     console.log('Group mode');
@@ -86,6 +90,10 @@ function addNodes(data) {
   }
 
 
+
+}
+
+function setActivityWeights() {
 
 }
 
@@ -108,19 +116,31 @@ function createLabels(data, keyName) {
   domLabels = labels;
 }
 
+var maxActivityWeight;
+
 function createLinks() {
-  /* Count: "3"
-Recipient: "test047@exch10-3.com"
-Sender: "test031@exch10-3.com" */
   for (var i = 0; i < networkData.length; i++) {
     var d = networkData[i];
     var total = parseInt(d.Count, 10);
-    graph.addLink(d['Sender'], d['Recipient'], { total: total });
+
+    var from = d['Sender'];
+    var to = d['Recipient'];
+
+    activity[from] += total;
+    activity[to] += total;
+
+    graph.addLink(from, to, { total: total });
   }
+
+  maxActivityWeight = _.max(activity);
+  console.log('maxActivityWeight', maxActivityWeight);
 }
 
 function createNodes(data, keyName) {
+
   for (var i = 0; i < data.length; i++) {
+    var nodeId = data[i][keyName];
+    activity[nodeId] = 0;
     graph.addNode(data[i][keyName], data[i]);
   }
 
@@ -226,20 +246,46 @@ function renderGraph() {
   var circleNode = buildCircleNodeShader();
   graphics.setNodeProgram(circleNode);
 
+  /*var curvedLink = buildCurvedLinkShader();
+  graphics.setLinkProgram(curvedLink);*/
+
   graphics.placeNode(function(ui, pos) {
     // This callback is called by the renderer before it updates
     // node coordinate. We can use it to update corresponding DOM
     // label position;
 
     const INDEX = ui.id;
-    const RADIUS = 1000;
-    const LABEL_RADIUS = 1150;
+    const RADIUS = 1000.0;
+    const LABEL_RADIUS = 1000.0;
 
-    let x = Math.cos(INDEX) * RADIUS;
-    let y = Math.sin(INDEX) * RADIUS;
+    var nodeId = ui.node.data.Mailbox;
+    let theta = 0;
 
-    let x2 = Math.cos(INDEX) * LABEL_RADIUS;
-    let y2 = Math.sin(INDEX) * LABEL_RADIUS;
+    // base radial position on index
+    let fract = INDEX / mailboxesData.length;
+
+    // base radial position on activity
+    let activityFract = activity[nodeId] / maxActivityWeight;
+
+    theta = fract * 360;
+
+    let thetaRadians = theta * (Math.PI / 180);
+
+    const WEIGHT = activity[nodeId];
+
+    let r = RADIUS - (900 * activityFract);
+    let r2 = LABEL_RADIUS - (900 * activityFract);
+
+    if (activityFract < 0.4) {
+      r *= 1.2;
+      r2 *= 1.2;
+    }
+
+    let x = Math.cos(thetaRadians) * r;
+    let y = Math.sin(thetaRadians) * r;
+
+    let x2 = Math.cos(thetaRadians) * r2;
+    let y2 = Math.sin(thetaRadians) * r2;
 
     ui.position.x = x;
     ui.position.y = y;
@@ -253,22 +299,10 @@ function renderGraph() {
     graphics.transformGraphToClientCoordinates(domPos);
 
     // then move corresponding dom label to its own position:
-    var nodeId = ui.node.data.Mailbox;
     var labelStyle = domLabels[nodeId].style;
 
     labelStyle.left = domPos.x + 'px';
     labelStyle.top = domPos.y + 'px';
-  }).placeLink(function(linkUI, fromPos, toPos) {
-    console.log('linkUI', linkUI);
-    // linkUI - is the object returend from link() callback above.
-    var ry = 0,
-    // using arc command: http://www.w3.org/TR/SVG/paths.html#PathDataEllipticalArcCommands
-        data = 'M' + fromPos.x + ',' + fromPos.y +
-               ' A 10,' + ry + ',-30,0,1,' + toPos.x + ',' + toPos.y;
-
-    // 'Path data' (http://www.w3.org/TR/SVG/paths.html#DAttribute )
-    // is a common way of rendering paths in SVG:
-    linkUI.attr('d', data);
   });
 
   // Step 4. Customize link appearance:
@@ -363,7 +397,9 @@ function buildCircleNodeShader() {
       webglUtils,
       nodes = new Float32Array(64),
       nodesCount = 0,
-      canvasWidth, canvasHeight, transform,
+      canvasWidth,
+      canvasHeight,
+      transform,
       isCanvasDirty;
 
   return {

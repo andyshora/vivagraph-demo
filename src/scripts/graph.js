@@ -203,22 +203,47 @@ function onLoad() {
     renderer.pause();
   });
 
+  $('#position').click(function () {
+    debugger
+  });
+
+
+
   window.addEventListener('resize', onResizeHandler);
 
 }
 
+function placeNode(nodeUI, pos) {
+  nodeUI.position.x = 0;
+  nodeUI.position.y = pos.y;
+}
+
 function renderGraph() {
   graphics = Viva.Graph.View.webglGraphics();
+
+  // first, tell webgl graphics we want to use custom shader
+  // to render nodes:
+  var circleNode = buildCircleNodeShader();
+  graphics.setNodeProgram(circleNode);
 
   graphics.placeNode(function(ui, pos) {
     // This callback is called by the renderer before it updates
     // node coordinate. We can use it to update corresponding DOM
     // label position;
 
+    const INDEX = ui.id;
+    const RADIUS = 1000;
+
+    let x = Math.cos(INDEX) * RADIUS;
+    let y = Math.sin(INDEX) * RADIUS;
+
+    ui.position.x = x;
+    ui.position.y = y;
+
     // we create a copy of layout position
     var domPos = {
-        x: pos.x,
-        y: pos.y
+      x: x,
+      y: y
     };
     // And ask graphics to transform it to DOM coordinates:
     graphics.transformGraphToClientCoordinates(domPos);
@@ -248,16 +273,13 @@ function renderGraph() {
     linkUI.attr('d', data);
   });*/
 
-  // first, tell webgl graphics we want to use custom shader
-  // to render nodes:
-  var circleNode = buildCircleNodeShader();
-  graphics.setNodeProgram(circleNode);
+
 
   const MAX_EMAILS = parseInt(_.max(networkData, d => { return parseInt(d.Count, 10) }).Count, 10);
 
   // second, change the node ui model, which can be understood
   // by the custom shader:
-  graphics.node(function(node) {
+  graphics.node(function(node, test) {
     return new WebglCircle(NODE_SIZE, NODE_COLOR);
   })
   .link(function(link) {
@@ -348,6 +370,7 @@ function buildCircleNodeShader() {
        * @param pos - {x, y} coordinates of the node.
        */
       position : function (nodeUI, pos) {
+
           var idx = nodeUI.id;
           nodes[idx * ATTRIBUTES_PER_PRIMITIVE] = pos.x;
           nodes[idx * ATTRIBUTES_PER_PRIMITIVE + 1] = -pos.y;

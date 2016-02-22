@@ -8,15 +8,15 @@ let emails = [];
 // light -> dark
 const COLORS = [
   0x009DF9FF,
-  0x0094EAFF,
-  0x0089D8FF,
-  0x0081CCFF,
-  0x0075BAFF,
-  0x006CAAFF,
-  0x005C91FF,
-  0x003351FF,
-  0x003351FF,
-  0x003351FF
+  0x009DF9FF,
+  0x009DF9DD,
+  0x009DF9DD,
+  0x009DF9DD,
+  0x009DF9CC,
+  0x009DF9CC,
+  0x009DF9CC,
+  0x009DF9BB,
+  0x009DF9BB
 ];
 
 /*const COLORS = [
@@ -233,17 +233,21 @@ function renderGraph() {
 
     const INDEX = ui.id;
     const RADIUS = 1000;
+    const LABEL_RADIUS = 1150;
 
     let x = Math.cos(INDEX) * RADIUS;
     let y = Math.sin(INDEX) * RADIUS;
+
+    let x2 = Math.cos(INDEX) * LABEL_RADIUS;
+    let y2 = Math.sin(INDEX) * LABEL_RADIUS;
 
     ui.position.x = x;
     ui.position.y = y;
 
     // we create a copy of layout position
     var domPos = {
-      x: x,
-      y: y
+      x: x2,
+      y: y2
     };
     // And ask graphics to transform it to DOM coordinates:
     graphics.transformGraphToClientCoordinates(domPos);
@@ -251,8 +255,20 @@ function renderGraph() {
     // then move corresponding dom label to its own position:
     var nodeId = ui.node.data.Mailbox;
     var labelStyle = domLabels[nodeId].style;
+
     labelStyle.left = domPos.x + 'px';
     labelStyle.top = domPos.y + 'px';
+  }).placeLink(function(linkUI, fromPos, toPos) {
+    console.log('linkUI', linkUI);
+    // linkUI - is the object returend from link() callback above.
+    var ry = 0,
+    // using arc command: http://www.w3.org/TR/SVG/paths.html#PathDataEllipticalArcCommands
+        data = 'M' + fromPos.x + ',' + fromPos.y +
+               ' A 10,' + ry + ',-30,0,1,' + toPos.x + ',' + toPos.y;
+
+    // 'Path data' (http://www.w3.org/TR/SVG/paths.html#DAttribute )
+    // is a common way of rendering paths in SVG:
+    linkUI.attr('d', data);
   });
 
   // Step 4. Customize link appearance:
@@ -286,7 +302,11 @@ function renderGraph() {
 
     // scale against 10 colors
     // 0 = brightest
-    var index = COLORS.length - Utils.toRangeIndex(link.data.total, MAX_EMAILS, COLORS.length);
+    var index = COLORS.length - 1 - Utils.toRangeIndex(link.data.total, MAX_EMAILS, COLORS.length);
+
+    if (!COLORS[index]) {
+      index = 0;
+    }
 
     return Viva.Graph.View.webglLine(COLORS[index]);
     // return Viva.Graph.View.webglLine(COLORS[(Math.random() * COLORS.length) << 0]);
